@@ -519,6 +519,57 @@ test_charted_kind_is_optional_and_accepts_both_values() {
   pass "charted kind is optional and accepts queued and warning"
 }
 
+test_row_refs_are_optional_strings_without_url_restrictions() {
+  local home data board
+  home=$(make_home row-refs)
+  data="$home/payload.json"
+  board="$home/.lavish/bearings-board.html"
+  write_valid_payload "$data"
+  run_board "$home" build "$data" >/dev/null \
+    || fail "a payload omitting every row ref was refused"
+  extract_payload "$board" | jq -e '
+    ([.underway[], .landed[], .charted[] | has("ref")] | any) | not
+  ' >/dev/null || fail "a build invented refs omitted by the payload"
+
+  jq '.underway = [{"id":"active","repo":"sample","name":"Active work","state":"working",
+        "kind":"ship","doing":"building","ref":"data/active/report.md"}]
+      | .landed = [{"id":"done","repo":"sample","what":"Completed work","owner":"crew",
+        "ref":"fm-reports\\backpass-integration.html"}]
+      | .charted[0].ref = "plain report path with spaces"' \
+    "$data" > "$data.tmp" && mv "$data.tmp" "$data"
+  run_board "$home" build "$data" >/dev/null \
+    || fail "valid string refs on the three fleet row kinds were refused"
+  extract_payload "$board" | jq -e '
+    .underway[0].ref == "data/active/report.md"
+      and .landed[0].ref == "fm-reports\\backpass-integration.html"
+      and .charted[0].ref == "plain report path with spaces"
+  ' >/dev/null || fail "valid row refs did not survive the board build"
+  pass "row refs are optional strings and do not require URL syntax"
+}
+
+test_row_refs_reject_non_strings() {
+  local home data board row rc out
+  for row in underway landed charted; do
+    home=$(make_home "bad-ref-$row")
+    data="$home/payload.json"
+    board="$home/.lavish/bearings-board.html"
+    write_valid_payload "$data"
+    jq '.underway = [{"id":"active","repo":"sample","name":"Active work","state":"working",
+          "kind":"ship","doing":"building"}]
+        | .landed = [{"id":"done","repo":"sample","what":"Completed work","owner":"crew"}]
+        | if $row == "underway" then .underway[0].ref = 7
+          elif $row == "landed" then .landed[0].ref = ["report"]
+          else .charted[0].ref = {"path":"report.md"} end' \
+      --arg row "$row" "$data" > "$data.tmp" && mv "$data.tmp" "$data"
+    set +e; out=$(run_board "$home" build "$data" 2>&1); rc=$?; set -e
+    [ "$rc" -ne 0 ] || fail "a non-string $row ref was accepted"
+    assert_contains "$out" "does not satisfy fm-bearings-board.v1" \
+      "the non-string $row ref refusal did not name the payload contract: $out"
+    assert_absent "$board" "a non-string $row ref still produced a board"
+  done
+  pass "non-string refs are rejected on underway, landed, and charted rows"
+}
+
 
 # --- part 1: never arm a poll on an ended session ---------------------------
 
@@ -780,6 +831,8 @@ test_build_refuses_a_nondecision_reconcile_value() {
 test_path_is_stable_and_home_scoped
 test_build_refuses_malformed_payloads_before_touching_the_board
 test_charted_kind_is_optional_and_accepts_both_values
+test_row_refs_are_optional_strings_without_url_restrictions
+test_row_refs_reject_non_strings
 test_build_injects_binds_then_arms
 test_registration_cannot_consume_before_any_origin_binding
 test_build_does_not_bind_or_arm_when_session_start_fails

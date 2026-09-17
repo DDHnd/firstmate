@@ -248,6 +248,15 @@ a { color: inherit; text-decoration: none; }
 .bb-row__id { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
 .bb-row__pr { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; color: var(--ocean-600); white-space: nowrap; }
 .bb-row__pr:hover { text-decoration: underline; }
+.bb-row__ref { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: min(46%, 320px); flex: none;
+  border: 1px solid var(--border-soft); border-radius: var(--radius-xs); background: var(--paper-100); padding: 3px 4px 3px 7px; }
+.bb-row__ref-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-muted); }
+.bb-row__copy { flex: none; cursor: pointer; border: 1px solid var(--border-default); border-radius: var(--radius-xs);
+  background: var(--surface-card); color: var(--text-strong); padding: 2px 6px;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; }
+.bb-row__copy:hover { background: var(--paper-200); }
+.bb-row__copy:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .bb-row__check { width: 26px; height: 26px; border-radius: var(--radius-sm); display: grid; place-items: center; flex: none;
   background: var(--status-online-soft); color: var(--status-online); border: 1.5px solid var(--sea-200); }
 .bb-row__check svg { width: 15px; height: 15px; }
@@ -435,6 +444,54 @@ __FM_BEARINGS_BOARD_DATA__
     return n;
   }
   function badge(tone, text) { return el("span", "fm-badge fm-badge--" + tone, text); }
+  function legacyCopy(text) {
+    var field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    var copied = false;
+    try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
+    document.body.removeChild(field);
+    return copied;
+  }
+  function copyText(text) {
+    function fallback() {
+      return legacyCopy(text) ? Promise.resolve() : Promise.reject(new Error("copy failed"));
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function") {
+      try {
+        return Promise.resolve(navigator.clipboard.writeText(text)).catch(fallback);
+      } catch (e) {
+        return fallback();
+      }
+    }
+    return fallback();
+  }
+  function refControl(ref) {
+    var wrap = el("span", "bb-row__ref");
+    var path = el("span", "bb-row__ref-text", ref);
+    path.title = ref;
+    wrap.appendChild(path);
+    var copy = el("button", "bb-row__copy", "Copy");
+    copy.type = "button";
+    copy.title = "Copy report path";
+    copy.setAttribute("aria-label", "Copy report path " + ref);
+    copy.addEventListener("click", function () {
+      copyText(ref).then(function () {
+        copy.textContent = "Copied";
+        setTimeout(function () { copy.textContent = "Copy"; }, 1400);
+      }, function () {
+        copy.textContent = "Copy failed";
+        setTimeout(function () { copy.textContent = "Copy"; }, 1800);
+      });
+    });
+    wrap.appendChild(copy);
+    return wrap;
+  }
   /* Warnings ride the charted feed for layout only; they are alarms, not work,
      so every count of queued work excludes them. */
   function isWarning(t) { return t && t.kind === "warning"; }
@@ -636,6 +693,7 @@ __FM_BEARINGS_BOARD_DATA__
     main.appendChild(el("div", "bb-row__sub",
       t.doing + " · " + t.kind + " · " + (t.repo || t.id)));
     row.appendChild(main);
+    if (typeof t.ref === "string") row.appendChild(refControl(t.ref));
     uw.appendChild(row);
   });
 
@@ -656,6 +714,7 @@ __FM_BEARINGS_BOARD_DATA__
       a.href = t.pr_url; a.title = t.pr_url; a.target = "_blank"; a.rel = "noopener";
       row.appendChild(a);
     }
+    if (typeof t.ref === "string") row.appendChild(refControl(t.ref));
     ld.appendChild(row);
   });
 
@@ -705,6 +764,7 @@ __FM_BEARINGS_BOARD_DATA__
     row.appendChild(main);
     if (isWarning(t)) row.appendChild(badge("danger", "needs repair"));
     else if (t.reason) row.appendChild(badge("warn", "waiting"));
+    if (typeof t.ref === "string") row.appendChild(refControl(t.ref));
     ch.appendChild(row);
   });
   var chartedShown = chartedQueued(data.charted).length;

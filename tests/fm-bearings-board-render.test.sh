@@ -57,13 +57,13 @@ SH
 }
 
 # Build the board from <underway-json> plus <charted-json> and return what the
-# renderer produced.
-render_board() {  # <home> <underway-json> <charted-json> [charted_more] [charted_warning_more]
-  local home=$1 underway=$2 charted=$3 more=${4:-0} warning_more=${5:-0} data="$1/payload.json"
-  jq -n --argjson underway "$underway" --argjson charted "$charted" \
+# renderer produced. The optional final argument supplies Recently Landed rows.
+render_board() {  # <home> <underway-json> <charted-json> [charted_more] [charted_warning_more] [landed-json]
+  local home=$1 underway=$2 charted=$3 more=${4:-0} warning_more=${5:-0} landed=${6:-[]} data="$1/payload.json"
+  jq -n --argjson underway "$underway" --argjson charted "$charted" --argjson landed "$landed" \
     --argjson more "$more" --argjson warning_more "$warning_more" '{
     schema:"fm-bearings-board.v1", home:"render-home", generated:"2026-08-26T00:00Z",
-    prs_live:false, captains_call:[], underway:$underway, landed:[],
+    prs_live:false, captains_call:[], underway:$underway, landed:$landed,
     charted:$charted, charted_more:$more, charted_warning_more:$warning_more}' > "$data"
   PATH="$home/fakebin:$PATH" FM_HOME="$home" \
     FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
@@ -228,10 +228,54 @@ test_charted_rows_without_a_filed_date_follow_the_dated_rows_in_payload_order() 
   pass "charted rows with no filed date follow the dated rows in payload order"
 }
 
+test_report_refs_render_as_text_and_copy_from_every_row_kind() {
+  local home out
+  home=$(make_home report-refs)
+  out=$(render_board "$home" '[
+    {"id":"active","repo":"sample","name":"Active work","state":"working","kind":"ship",
+     "doing":"building","ref":"data/active/report.md"}
+  ]' '[
+    {"id":"next","repo":"sample","title":"Next work","reason":"queued","dispatchable":true,
+     "ref":"notes/<next>&report.md"}
+  ]' 0 0 '[
+    {"id":"done","repo":"sample","what":"Completed work","owner":"crew",
+     "pr_url":"https://github.com/example/sample/pull/17","ref":"fm-reports\\backpass-integration.html"}
+  ]')
+  printf '%s' "$out" | jq -e '
+    .error == ""
+      and .underway[0].ref == {text:"data/active/report.md", title:"data/active/report.md", button:"Copy"}
+      and .landed[0].ref == {text:"fm-reports\\backpass-integration.html", title:"fm-reports\\backpass-integration.html", button:"Copy"}
+      and .landed[0].pr == {text:"#17", href:"https://github.com/example/sample/pull/17"}
+      and .charted[0].ref == {text:"notes/<next>&report.md", title:"notes/<next>&report.md", button:"Copy"}
+      and .copied == ["data/active/report.md", "notes/<next>&report.md", "fm-reports\\backpass-integration.html"]
+      and .copyMethods == ["clipboard", "clipboard", "fallback"]
+  ' >/dev/null || fail "report refs were not safely rendered and copied from all three row kinds: $out"
+  pass "underway, landed, and charted refs render as plain text and copy through Clipboard and HTTP fallback paths"
+}
+
+test_rows_without_report_refs_keep_the_existing_rendering() {
+  local home out
+  home=$(make_home no-report-refs)
+  out=$(render_board "$home" '[
+    {"id":"active","repo":"sample","name":"Active work","state":"working","kind":"ship","doing":"building"}
+  ]' '[
+    {"id":"next","repo":"sample","title":"Next work","reason":"","dispatchable":true}
+  ]' 0 0 '[
+    {"id":"done","repo":"sample","what":"Completed work","owner":"crew"}
+  ]')
+  printf '%s' "$out" | jq -e '
+    .underway[0].ref == null and .landed[0].ref == null and .charted[0].ref == null
+      and .copied == []
+  ' >/dev/null || fail "a missing ref changed existing row rendering: $out"
+  pass "rows without refs remain backward compatible"
+}
+
 test_an_underway_row_leads_with_the_task_name_and_keeps_its_run_status
 test_an_underway_identifier_label_is_not_replaced_by_run_status
 test_charted_next_reads_newest_filed_first
 test_charted_rows_without_a_filed_date_follow_the_dated_rows_in_payload_order
+test_report_refs_render_as_text_and_copy_from_every_row_kind
+test_rows_without_report_refs_keep_the_existing_rendering
 test_a_warning_row_reads_as_a_repair_not_as_queued_work
 test_warnings_are_excluded_from_the_charted_next_count
 test_a_board_of_only_warnings_still_reports_nothing_queued

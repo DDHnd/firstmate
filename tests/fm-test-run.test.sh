@@ -117,6 +117,7 @@ init_changed_fixture_repo() {
     fm-pi-windows-shell-invocation.test.sh \
     fm-afk-return.test.sh \
     fm-bearings-snapshot.test.sh \
+    fm-bearings-board-render.test.sh \
     fm-backend-cmux.test.sh \
     fm-backend-zellij.test.sh \
     fm-control-herdr-smoke.test.sh \
@@ -137,6 +138,9 @@ init_changed_fixture_repo() {
   # beside a tests/ file nothing reads at all.
   : >"$repo/tests/shared-probe-fixture.sh"
   : >"$repo/tests/unread-thing.sh"
+  mkdir -p "$repo/tests/assets"
+  : >"$repo/tests/assets/board-render-harness.mjs"
+  printf '# tests/assets/board-render-harness.mjs\n' >>"$repo/tests/fm-bearings-board-render.test.sh"
   printf '# shared-probe-fixture.sh\n' >>"$repo/tests/fm-pr-merge.test.sh"
   printf '# shared-probe-fixture.sh\n' >>"$repo/tests/fm-secondmate-safety.test.sh"
   # A nested fixture whose consuming suite names only the fixture directory,
@@ -1355,6 +1359,13 @@ test_changed_shared_fixture_selects_its_readers() {
   esac
   git -C "$repo" add tests/shared-probe-fixture.sh
   git -C "$repo" -c user.name=test -c user.email=test@example.invalid commit -qm fixture-change
+
+  printf '\n' >>"$repo/tests/assets/board-render-harness.mjs"
+  listed=$(cd "$repo" && bin/fm-test-run.sh --list --changed --base HEAD)
+  [ "$listed" = "tests/fm-bearings-board-render.test.sh" ] \
+    || fail "a changed test asset did not select only its reader: $listed"
+  git -C "$repo" add tests/assets/board-render-harness.mjs
+  git -C "$repo" -c user.name=test -c user.email=test@example.invalid commit -qm test-asset-change
 
   printf '\n' >>"$repo/tests/unread-thing.sh"
   set +e

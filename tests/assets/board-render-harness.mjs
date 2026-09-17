@@ -4,11 +4,13 @@
 //
 // Usage: node board-render-harness.mjs <built-board.html>
 // Prints one JSON document:
-//   { stats:[{n,label}], underway:[{title,sub,badges}],
-//     charted:[{title,sub,badges,pickable}], empty, more, error }
+//   { stats:[{n,label}], underway:[{title,sub,badges,ref}],
+//     landed:[{title,sub,badges,ref}], charted:[{title,sub,badges,pickable,ref}],
+//     copied, copyMethods, empty, more, error }
 import { readFileSync } from "node:fs";
 
 const html = readFileSync(process.argv[2], "utf8");
+let selectedCopyField = null;
 
 class Node {
   constructor(tag) {
@@ -24,6 +26,8 @@ class Node {
     this.type = "";
     this.value = "";
     this.checked = false;
+    this.style = {};
+    this.listeners = {};
     this.classList = {
       add: (c) => { this.className = (this.className + " " + c).trim(); },
       contains: (c) => this.className.split(/\s+/).includes(c),
@@ -36,8 +40,11 @@ class Node {
   }
   set textContent(v) { this._text = String(v); this.children = []; }
   appendChild(n) { n.parentNode = this; this.children.push(n); return n; }
+  removeChild(n) { this.children = this.children.filter((c) => c !== n); n.parentNode = null; return n; }
   setAttribute(k, v) { this.attributes[k] = v; }
-  addEventListener() {}
+  addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
+  click() { (this.listeners.click || []).forEach((fn) => fn({ preventDefault() {} })); }
+  select() { selectedCopyField = this; }
   querySelectorAll(sel) {
     const want = sel.replace(/^\./, "").replace(/:checked$/, "");
     const checkedOnly = sel.endsWith(":checked");
@@ -54,6 +61,9 @@ class Node {
 }
 
 const byId = new Map();
+const body = new Node("body");
+const copied = [];
+const copyMethods = [];
 const dataNode = new Node("script");
 dataNode.textContent = html
   .split('<script id="bearings-data" type="application/json">')[1]
@@ -61,7 +71,14 @@ dataNode.textContent = html
 byId.set("bearings-data", dataNode);
 
 globalThis.document = {
+  body,
   createElement: (tag) => new Node(tag),
+  execCommand: (command) => {
+    if (command !== "copy" || !selectedCopyField) return false;
+    copied.push(selectedCopyField.value);
+    copyMethods.push("fallback");
+    return true;
+  },
   // Lazily mint any element the page asks for: the shim tracks whatever ids
   // the shipped template actually uses instead of pinning a fixed list.
   getElementById: (id) => {
@@ -80,6 +97,17 @@ globalThis.document = {
 };
 globalThis.window = {};
 globalThis.TextEncoder = TextEncoder;
+Object.defineProperty(globalThis, "navigator", {
+  configurable: true,
+  value: { clipboard: { writeText: (text) => {
+    // Force the Windows-path row through the legacy branch that keeps copy
+    // working when the HTTP origin does not expose the Clipboard API.
+    if (text.startsWith("fm-reports\\")) return Promise.reject(new Error("clipboard unavailable"));
+    copied.push(text);
+    copyMethods.push("clipboard");
+    return Promise.resolve();
+  } } },
+});
 
 const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
 new Function(script)();
@@ -105,14 +133,38 @@ const rowsOf = (container) =>
         sub: main?.children.find((c) => c.className.includes("bb-row__sub"))?.textContent ?? "",
         badges: badgesOf(row),
         pickable: row.children.some((c) => c.className.includes("bb-pick") && !c.className.includes("spacer")),
+        pr: (() => {
+          const link = row.children.find((c) => c.className.includes("bb-row__pr"));
+          return link ? { text: link.textContent, href: link.href } : null;
+        })(),
+        ref: (() => {
+          const control = row.children.find((c) => c.className.includes("bb-row__ref"));
+          if (!control) return null;
+          const text = control.children.find((c) => c.className.includes("bb-row__ref-text"));
+          const button = control.children.find((c) => c.className.includes("bb-row__copy"));
+          return { text: text?.textContent ?? "", title: text?.title ?? "", button: button?.textContent ?? "" };
+        })(),
       };
     });
 
 const uw = byId.get("bb-underway") || new Node("div");
 const underway = rowsOf(uw);
 
+const ld = byId.get("bb-landed") || new Node("div");
+const landed = rowsOf(ld);
+
 const ch = byId.get("bb-charted") || new Node("div");
 const charted = rowsOf(ch);
+for (const container of [uw, ld, ch]) {
+  for (const row of container.children) {
+    row.children
+      .flatMap((child) => child.className.includes("bb-row__ref") ? child.children : [])
+      .filter((child) => child.className.includes("bb-row__copy"))
+      .forEach((button) => button.click());
+  }
+}
+await Promise.resolve();
+await Promise.resolve();
 // A fail-closed render replaces the page body instead of the board sections, so
 // surface it rather than reporting an empty board as a successful render.
 const errorText = [...byId.entries()]
@@ -123,4 +175,4 @@ const empty = ch.children.filter((c) => c.className.includes("bb-empty")).map((c
 const more = ch.children.filter((c) => c.className.includes("bb-morechip")).map((c) => c.textContent);
 
 process.stdout.write(
-  JSON.stringify({ stats, underway, charted, empty, more, error: errorText }) + "\n");
+  JSON.stringify({ stats, underway, landed, charted, copied, copyMethods, empty, more, error: errorText }) + "\n");
