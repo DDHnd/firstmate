@@ -79,6 +79,10 @@
 # plain text with a copy control rather than as a link, so relative paths,
 # Windows paths, and other non-URL references remain usable from the board's
 # HTTP origin.
+# Omit `ref` when no path is available; any present non-string value, including
+# null, is rejected. Copy preserves the full string even when its display is
+# truncated. The separate optional `pr_url` on Recently Landed rows remains an
+# HTTPS-only clickable link.
 # A Charted Next row MAY carry `filed`, the durable filed date (YYYY-MM-DD, or
 # that date with a UTC timestamp) the template orders the section by, newest
 # first; a row with no comparable date keeps its payload order after every dated
