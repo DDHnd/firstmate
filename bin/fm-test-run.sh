@@ -136,11 +136,13 @@
 # share a machine. This script owns <n>: a lane whose <n> disagrees with the
 # configured shard count is refused, so a CI matrix cannot silently drop a shard.
 # --changed is conservative: it over-selects related families rather than
-# under-selecting, and never expands to the complete suite unless --all. The one
-# place it is deliberately narrow is a bin/ path with no curated family: a test
-# that names it is selected as that SCRIPT, because the reference is per-script
-# evidence. Consumer bin/ scripts still resolve through the curated map, so
+# under-selecting, and never expands to the complete suite unless --all.
+# A bin/ path with no curated family deliberately selects a test that names it
+# as that SCRIPT, because the reference is per-script evidence.
+# Consumer bin/ scripts still resolve through the curated map, so
 # recorded family-level coupling still expands to the whole family.
+# A tests/assets/ path likewise selects only scripts naming its basename;
+# an asset with no matching consumer is refused as unmapped.
 # tests/lib.sh, tests/fixtures.sh, tests/*-helpers.sh and tests/*-fixture.sh are
 # shared files that map to the suites naming them; a fixture under
 # tests/fixtures/<dir>/ is mapped by that directory instead. Curated family arms
