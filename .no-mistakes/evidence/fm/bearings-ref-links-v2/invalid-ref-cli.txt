@@ -1,0 +1,30 @@
+underway ref=null: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+underway ref=17: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+underway ref=true: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+underway ref=[]: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+underway ref={}: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+landed ref=null: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+landed ref=17: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+landed ref=true: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+landed ref=[]: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+landed ref={}: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+charted ref=null: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+charted ref=17: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+charted ref=true: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+charted ref=[]: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
+charted ref={}: exit=1
+fm-bearings-board: board data does not satisfy fm-bearings-board.v1: /home/feiti/.no-mistakes/worktrees/25a6f04e4724/01M2R1RWNAB3MWMCVDETAPYHD8/.test-ref-validation/payload.json
